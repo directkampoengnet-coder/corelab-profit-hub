@@ -50,6 +50,9 @@ export function useDerivAuth() {
 console.log("OAUTH URL =", oauthUrl)
     
     console.log("[v0] 🔐 Initiating OAuth login...")
+    console.log("APP_ID =", DERIV_CONFIG.APP_ID)
+    console.log("OAUTH URL =", oauthUrl)
+
     window.location.href = oauthUrl
   }
 
