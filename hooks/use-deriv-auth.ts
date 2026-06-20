@@ -99,14 +99,14 @@ console.log("OAUTH URL =", oauthUrl)
 
     const storedToken = localStorage.getItem("deriv_api_token")
 
-    if (storedToken && storedToken.length > 10) {
-      console.log("[v0] ✅ Existing API token found")
-      setToken(storedToken)
-      connectWithToken(storedToken)
-    } else {
-      console.log("[v0] ℹ️ No API token found, initiating OAuth login")
-      loginWithDeriv()
-    }
+if (storedToken && storedToken.length > 10) {
+  console.log("[v0] ✅ Existing API token found")
+  setToken(storedToken)
+  connectWithToken(storedToken)
+} else {
+  console.log("[v0] ℹ️ No API token found")
+  setConnectionStatus("disconnected")
+}
 
     return () => {
       if (wsRef) {
@@ -252,17 +252,16 @@ console.log("OAUTH URL =", oauthUrl)
     localStorage.removeItem("deriv_active_login_id")
 
     setToken("")
-    setIsLoggedIn(false)
-    setBalance(null)
-    setAccountType(null)
-    setAccountCode("")
-    setAccounts([])
-    setActiveLoginId(null)
-    setBalanceSubscribed(false)
-    setConnectionStatus("disconnected")
-    console.log("[v0] ✅ Logged out successfully")
-    loginWithDeriv()
-  }
+setIsLoggedIn(false)
+setBalance(null)
+setAccountType(null)
+setAccountCode("")
+setAccounts([])
+setActiveLoginId(null)
+setBalanceSubscribed(false)
+setConnectionStatus("disconnected")
+console.log("[v0] ✅ Logged out successfully")
+}
 
   const switchAccount = (loginId: string) => {
     if (typeof window === "undefined") return
