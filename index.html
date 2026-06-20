@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deriv Trading Bot - Professional Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        
+        .glass-effect {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-connected {
+            background-color: #10b981;
+        }
+        
+        .status-disconnected {
+            background-color: #ef4444;
+            animation: none;
+        }
+        
+        .status-connecting {
+            background-color: #f59e0b;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .trade-log {
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 12px;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+        
+        .log-entry {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .log-success { color: #10b981; }
+        .log-error { color: #ef4444; }
+        .log-warning { color: #f59e0b; }
+        .log-info { color: #3b82f6; }
+        
+        input:disabled, select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        
+        .btn-danger:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h1 class="text-3xl font-bold gradient-text mb-2">Deriv Trading Bot</h1>
+                    <p class="text-slate-400">Professional WebSocket Trading Platform</p>
+                </div>
+                <div class="text-right">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="status-indicator status-disconnected" id="statusIndicator"></span>
+                        <span id="connectionStatus" class="text-sm font-semibold">Disconnected</span>
+                    </div>
+                    <div class="text-xs text-slate-500" id="apiStatus">API: Waiting...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            <!-- Left Panel: Settings -->
+            <div class="lg:col-span-2 space-y-4">
+                <!-- API Token -->
+                <div class="glass-effect p-4 rounded-lg">
+                    <label class="block text-sm font-semibold mb-2">API Token</label>
+                    <input 
+                        type="password" 
+                        id="apiToken" 
+                        placeholder="Enter your Deriv API token"
+                        class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                    >
+                    <button 
+                        id="connectBtn" 
+                        class="mt-2 w-full btn-primary text-white font-semibold py-2 rounded transition"
+                    >
+                        Connect to Deriv
+                    </button>
+                </div>
+
+                <!-- Market & Contract Selection -->
+                <div class="glass-effect p-4 rounded-lg">
+                    <h3 class="text-sm font-semibold mb-3">Market & Contract</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Market</label>
+                            <select id="market" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                                <option value="R_10">Volatility 10 (R_10)</option>
+                                <option value="R_25">Volatility 25 (R_25)</option>
+                                <option value="R_50">Volatility 50 (R_50)</option>
+                                <option value="R_75">Volatility 75 (R_75)</option>
+                                <option value="R_100">Volatility 100 (R_100)</option>
+                                <option value="EURUSD">EUR/USD</option>
+                                <option value="GBPUSD">GBP/USD</option>
+                                <option value="USDJPY">USD/JPY</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Contract Type</label>
+                            <select id="contractType" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                                <option value="CALL">Rise (CALL)</option>
+                                <option value="PUT">Fall (PUT)</option>
+                                <option value="DIGITMATCH">Digit Match</option>
+                                <option value="DIGITDIFF">Digit Diff</option>
+                                <option value="DIGITEVEN">Digit Even</option>
+                                <option value="DIGITODD">Digit Odd</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trade Parameters -->
+                <div class="glass-effect p-4 rounded-lg">
+                    <h3 class="text-sm font-semibold mb-3">Trade Parameters</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Stake (USD)</label>
+                            <input 
+                                type="number" 
+                                id="stake" 
+                                value="1" 
+                                min="0.35" 
+                                step="0.01"
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Duration (Ticks)</label>
+                            <input 
+                                type="number" 
+                                id="duration" 
+                                value="5" 
+                                min="1" 
+                                max="60"
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Digit (0-9)</label>
+                            <input 
+                                type="number" 
+                                id="digit" 
+                                value="5" 
+                                min="0" 
+                                max="9"
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Barrier Offset</label>
+                            <input 
+                                type="number" 
+                                id="barrier" 
+                                value="0.001" 
+                                step="0.001"
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Management -->
+                <div class="glass-effect p-4 rounded-lg">
+                    <h3 class="text-sm font-semibold mb-3">Risk Management</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Take Profit (USD)</label>
+                            <input 
+                                type="number" 
+                                id="takeProfit" 
+                                value="100" 
+                                step="1"
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Stop Loss (USD)</label>
+                            <input 
+                                type="number" 
+                                id="stopLoss" 
+                                value="-50" 
+                                step="1"
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Martingale Multiplier</label>
+                            <input 
+                                type="number" 
+                                id="martingale" 
+                                value="2" 
+                                min="1" 
+                                max="10"
+                                step="0.1"
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Max Consecutive Losses</label>
+                            <input 
+                                type="number" 
+                                id="maxLosses" 
+                                value="5" 
+                                min="1"
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bot Mode Selection -->
+                <div class="glass-effect p-4 rounded-lg">
+                    <h3 class="text-sm font-semibold mb-3">Bot Mode</h3>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button id="manualMode" class="bg-slate-700 hover:bg-slate-600 text-white py-2 rounded text-sm font-semibold transition">Manual</button>
+                        <button id="speedBotMode" class="bg-slate-700 hover:bg-slate-600 text-white py-2 rounded text-sm font-semibold transition">SpeedBot</button>
+                        <button id="autoBotMode" class="bg-slate-700 hover:bg-slate-600 text-white py-2 rounded text-sm font-semibold transition">AutoBot</button>
+                    </div>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="glass-effect p-4 rounded-lg">
+                    <div class="grid grid-cols-3 gap-3">
+                        <button 
+                            id="tradeBtn" 
+                            class="btn-primary text-white font-semibold py-2 rounded transition disabled:opacity-50"
+                            disabled
+                        >
+                            Trade Now
+                        </button>
+                        <button 
+                            id="stopBtn" 
+                            class="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded transition disabled:opacity-50"
+                            disabled
+                        >
+                            Stop Bot
+                        </button>
+                        <button 
+                            id="emergencyBtn" 
+                            class="btn-danger text-white font-semibold py-2 rounded transition"
+                        >
+                            Emergency Stop
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Stats & Logs -->
+            <div class="space-y-4">
+                <!-- Account Stats -->
+                <div class="glass-effect p-4 rounded-lg">
+                    <h3 class="text-sm font-semibold mb-3">Account Stats</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Balance:</span>
+                            <span id="balance" class="font-semibold">$0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Session Profit:</span>
+                            <span id="sessionProfit" class="font-semibold text-green-400">$0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Wins:</span>
+                            <span id="wins" class="font-semibold">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Losses:</span>
+                            <span id="losses" class="font-semibold">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Win Rate:</span>
+                            <span id="winRate" class="font-semibold">0%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Consecutive Losses:</span>
+                            <span id="consecutiveLosses" class="font-semibold text-red-400">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trade Log -->
+                <div class="glass-effect p-4 rounded-lg">
+                    <h3 class="text-sm font-semibold mb-3">Trade Log</h3>
+                    <div id="tradeLog" class="trade-log bg-slate-950 rounded p-2">
+                        <div class="log-entry log-info">[System] Ready to connect...</div>
+                    </div>
+                    <button 
+                        id="clearLogBtn" 
+                        class="mt-2 w-full bg-slate-700 hover:bg-slate-600 text-white text-xs py-1 rounded transition"
+                    >
+                        Clear Log
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // DERIV TRADING BOT - SINGLE FILE APPLICATION
+        // ============================================
+
+        const CONFIG = {
+            API_URL: 'wss://ws.binaryws.com/websockets/v3?app_id=106629',
+            CONTRACTS_WITH_BARRIER: new Set(['CALL_BARRIER', 'PUT_BARRIER', 'RANGE', 'UPDOWN', 'TOUCH', 'NOTOUCH', 'ASIANU', 'ASIANL']),
+            DIGIT_CONTRACTS: new Set(['DIGITMATCH', 'DIGITDIFF', 'DIGITEVEN', 'DIGITODD']),
+            PROPOSAL_TIMEOUT: 5000,
+            MAX_RETRIES: 3
+        };
+
+        // ============================================
+        // STATE MANAGEMENT
+        // ============================================
+        const state = {
+            ws: null,
+            authorized: false,
+            connected: false,
+            botRunning: false,
+            botMode: 'manual',
+            balance: 0,
+            sessionProfit: 0,
+            wins: 0,
+            losses: 0,
+            consecutiveLosses: 0,
+            currentStake: 0,
+            proposals: new Map(),
+            lastProposalTime: 0,
+            buyLock: false,
+            tradeInProgress: false,
+            subscriptionState: {
+                balance: false,
+                portfolio: false
+            }
+        };
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        function isValidPrice(p) {
+            const price = Number(p);
+            return Number.isFinite(price) && price > 0;
+        }
+
+        function formatPrice(p) {
+            return Number(Number(p).toFixed(5));
+        }
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('tradeLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateUI() {
+            document.getElementById('balance').textContent = `$${state.balance.toFixed(2)}`;
+            document.getElementById('sessionProfit').textContent = `$${state.sessionProfit.toFixed(2)}`;
+            document.getElementById('wins').textContent = state.wins;
+            document.getElementById('losses').textContent = state.losses;
+            document.getElementById('consecutiveLosses').textContent = state.consecutiveLosses;
+            
+            const winRate = (state.wins + state.losses) > 0 
+                ? ((state.wins / (state.wins + state.losses)) * 100).toFixed(1)
+                : 0;
+            document.getElementById('winRate').textContent = `${winRate}%`;
+
+            const indicator = document.getElementById('statusIndicator');
+            const status = document.getElementById('connectionStatus');
+            
+            if (state.connected && state.authorized) {
+                indicator.className = 'status-indicator status-connected';
+                status.textContent = 'Connected & Authorized';
+            } else if (state.connected) {
+                indicator.className = 'status-indicator status-connecting';
+                status.textContent = 'Connected (Authorizing...)';
+            } else {
+                indicator.className = 'status-indicator status-disconnected';
+                status.textContent = 'Disconnected';
+            }
+
+            const tradeBtn = document.getElementById('tradeBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const inputs = document.querySelectorAll('input[type="number"], select');
+            
+            inputs.forEach(input => {
+                input.disabled = state.botRunning || !state.authorized;
+            });
+
+            tradeBtn.disabled = !state.authorized || state.botRunning;
+            stopBtn.disabled = !state.botRunning;
+        }
+
+        // ============================================
+        // WEBSOCKET CONNECTION
+        // ============================================
+        function connectWebSocket() {
+            return new Promise((resolve, reject) => {
+                try {
+                    state.ws = new WebSocket(CONFIG.API_URL);
+
+                    state.ws.onopen = () => {
+                        state.connected = true;
+                        log('WebSocket connected', 'success');
+                        updateUI();
+                        resolve();
+                    };
+
+                    state.ws.onmessage = (event) => {
+                        handleMessage(JSON.parse(event.data));
+                    };
+
+                    state.ws.onerror = (error) => {
+                        log(`WebSocket error: ${error.message}`, 'error');
+                        reject(error);
+                    };
+
+                    state.ws.onclose = () => {
+                        state.connected = false;
+                        state.authorized = false;
+                        state.botRunning = false;
+                        log('WebSocket disconnected', 'warning');
+                        updateUI();
+                    };
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        // ============================================
+        // MESSAGE HANDLING
+        // ============================================
+        function handleMessage(data) {
+            if (data.error) {
+                log(`API Error: ${data.error.message}`, 'error');
+                return;
+            }
+
+            if (data.authorize) {
+                state.authorized = true;
+                log('Authorization successful', 'success');
+                
+                sendMessage({ forget_all: 'all' });
+                
+                setTimeout(() => {
+                    if (!state.subscriptionState.balance) {
+                        sendMessage({ balance: 1, subscribe: 1 });
+                        state.subscriptionState.balance = true;
+                    }
+                }, 300);
+                
+                updateUI();
+                return;
+            }
+
+            if (data.balance) {
+                state.balance = parseFloat(data.balance.balance);
+                updateUI();
+                return;
+            }
+
+            if (data.proposal) {
+                handleProposal(data.proposal);
+                return;
+            }
+
+            if (data.buy) {
+                handleBuyResponse(data.buy);
+                return;
+            }
+
+            if (data.sell) {
+                handleSellResponse(data.sell);
+                return;
+            }
+
+            if (data.portfolio) {
+                handlePortfolio(data.portfolio);
+                return;
+            }
+
+            if (data.forget_all) {
+                log('Old subscriptions cleared', 'info');
+                return;
+            }
+        }
+
+        function handleProposal(proposal) {
+            const price = proposal.ask_price || proposal.price;
+            
+            if (!isValidPrice(price)) {
+                log(`Invalid proposal price: ${price}`, 'error');
+                return;
+            }
+
+            const proposalId = proposal.id || proposal.proposal_id;
+            state.proposals.set(proposalId, {
+                ...proposal,
+                receivedAt: Date.now(),
+                price: price
+            });
+
+            state.lastProposalTime = Date.now();
+            log(`Proposal received: ${proposal.contract_type} @ $${price} (ID: ${proposalId})`, 'info');
+        }
+
+        function handleBuyResponse(buyData) {
+            state.buyLock = false;
+            state.tradeInProgress = false;
+
+            if (buyData.error) {
+                log(`Buy failed: ${buyData.error}`, 'error');
+                return;
+            }
+
+            log(`Trade executed: Contract ID ${buyData.contract_id}`, 'success');
+        }
+
+        function handleSellResponse(sellData) {
+            if (sellData.error) {
+                log(`Sell failed: ${sellData.error}`, 'error');
+                return;
+            }
+
+            const pnl = sellData.sold_for - sellData.buy_price;
+            state.sessionProfit += pnl;
+
+            if (pnl > 0) {
+                state.wins++;
+                state.consecutiveLosses = 0;
+                log(`Trade won: +$${pnl.toFixed(2)}`, 'success');
+            } else {
+                state.losses++;
+                state.consecutiveLosses++;
+                log(`Trade lost: -$${Math.abs(pnl).toFixed(2)}`, 'error');
+            }
+
+            updateUI();
+        }
+
+        function handlePortfolio(portfolio) {
+            if (portfolio.contracts && portfolio.contracts.length > 0) {
+                portfolio.contracts.forEach(contract => {
+                    if (contract.status === 'sold') {
+                        const pnl = contract.sell_price - contract.buy_price;
+                        state.sessionProfit += pnl;
+                        
+                        if (pnl > 0) {
+                            state.wins++;
+                            state.consecutiveLosses = 0;
+                        } else {
+                            state.losses++;
+                            state.consecutiveLosses++;
+                        }
+                    }
+                });
+                updateUI();
+            }
+        }
+
+        // ============================================
+        // TRADE EXECUTION
+        // ============================================
+        function buildProposalPayload() {
+            const market = document.getElementById('market').value;
+            const contractType = document.getElementById('contractType').value;
+            const stake = parseFloat(document.getElementById('stake').value);
+            const duration = parseInt(document.getElementById('duration').value);
+            const digit = parseInt(document.getElementById('digit').value);
+            const barrier = parseFloat(document.getElementById('barrier').value);
+
+            const payload = {
+                proposal: 1,
+                symbol: market,
+                contract_type: contractType,
+                amount: formatPrice(stake),
+                duration: duration,
+                duration_unit: 't'
+            };
+
+            // Only add barrier for contracts that explicitly support it
+            if (CONFIG.CONTRACTS_WITH_BARRIER.has(contractType)) {
+                payload.barrier = String(barrier);
+            }
+
+            // For digit contracts (except Even/Odd), use digit as barrier
+            if (CONFIG.DIGIT_CONTRACTS.has(contractType) && contractType !== 'DIGITEVEN' && contractType !== 'DIGITODD') {
+                payload.barrier = String(digit);
+            }
+
+            // They don't support barriers and will cause "Barrier is not allowed" error
+
+            return payload;
+        }
+
+        async function requestProposal() {
+            if (!state.authorized || !state.ws || state.ws.readyState !== WebSocket.OPEN) {
+                log('Cannot request proposal: not authorized or WebSocket not open', 'error');
+                return null;
+            }
+
+            const payload = buildProposalPayload();
+            log(`Requesting proposal: ${payload.contract_type} on ${payload.symbol}`, 'info');
+            
+            sendMessage(payload);
+            
+            // Wait for proposal response
+            return new Promise((resolve) => {
+                const timeout = setTimeout(() => {
+                    log('Proposal request timed out', 'error');
+                    resolve(null);
+                }, CONFIG.PROPOSAL_TIMEOUT);
+
+                const checkProposal = setInterval(() => {
+                    if (state.proposals.size > 0) {
+                        clearInterval(checkProposal);
+                        clearTimeout(timeout);
+                        const proposal = Array.from(state.proposals.values())[0];
+                        state.proposals.clear();
+                        resolve(proposal);
+                    }
+                }, 100);
+            });
+        }
+
+        async function executeTrade() {
+            if (state.buyLock || state.tradeInProgress) {
+                log('Trade already in progress', 'warning');
+                return;
+            }
+
+            state.buyLock = true;
+            state.tradeInProgress = true;
+
+            try {
+                const proposal = await requestProposal();
+                
+                if (!proposal) {
+                    log('Failed to get proposal', 'error');
+                    state.buyLock = false;
+                    state.tradeInProgress = false;
+                    return;
+                }
+
+                const price = proposal.ask_price || proposal.price;
+                if (!isValidPrice(price)) {
+                    log(`Invalid proposal price: ${price}`, 'error');
+                    state.buyLock = false;
+                    state.tradeInProgress = false;
+                    return;
+                }
+
+                if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+                    log('WebSocket not connected', 'error');
+                    state.buyLock = false;
+                    state.tradeInProgress = false;
+                    return;
+                }
+
+                const buyPayload = {
+                    buy: proposal.id || proposal.proposal_id,
+                    price: price
+                };
+
+                log(`Executing trade: ${buyPayload.buy} @ $${buyPayload.price}`, 'info');
+                sendMessage(buyPayload);
+
+                // Update stake for martingale
+                if (state.consecutiveLosses > 0) {
+                    const martingale = parseFloat(document.getElementById('martingale').value);
+                    state.currentStake = parseFloat(document.getElementById('stake').value) * Math.pow(martingale, state.consecutiveLosses);
+                    document.getElementById('stake').value = state.currentStake.toFixed(2);
+                } else {
+                    state.currentStake = parseFloat(document.getElementById('stake').value);
+                }
+
+            } catch (error) {
+                log(`Trade execution error: ${error.message}`, 'error');
+            } finally {
+                state.buyLock = false;
+            }
+        }
+
+        // ============================================
+        // BOT MODES
+        // ============================================
+        function startSpeedBot() {
+            state.botRunning = true;
+            state.botMode = 'speedbot';
+            log('SpeedBot started', 'success');
+            updateUI();
+
+            const speedBotInterval = setInterval(async () => {
+                if (!state.botRunning) {
+                    clearInterval(speedBotInterval);
+                    return;
+                }
+
+                // Check TP/SL
+                const tp = parseFloat(document.getElementById('takeProfit').value);
+                const sl = parseFloat(document.getElementById('stopLoss').value);
+
+                if (state.sessionProfit >= tp) {
+                    log(`Take Profit reached: $${state.sessionProfit.toFixed(2)}`, 'success');
+                    stopBot();
+                    clearInterval(speedBotInterval);
+                    return;
+                }
+
+                if (state.sessionProfit <= sl) {
+                    log(`Stop Loss reached: $${state.sessionProfit.toFixed(2)}`, 'error');
+                    stopBot();
+                    clearInterval(speedBotInterval);
+                    return;
+                }
+
+                // Check max consecutive losses
+                const maxLosses = parseInt(document.getElementById('maxLosses').value);
+                if (state.consecutiveLosses >= maxLosses) {
+                    log(`Max consecutive losses reached: ${state.consecutiveLosses}`, 'error');
+                    stopBot();
+                    clearInterval(speedBotInterval);
+                    return;
+                }
+
+                await executeTrade();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }, 100);
+        }
+
+        function startAutoBot() {
+            state.botRunning = true;
+            state.botMode = 'autobot';
+            log('AutoBot started', 'success');
+            updateUI();
+
+            const autoBotInterval = setInterval(async () => {
+                if (!state.botRunning) {
+                    clearInterval(autoBotInterval);
+                    return;
+                }
+
+                // Check TP/SL
+                const tp = parseFloat(document.getElementById('takeProfit').value);
+                const sl = parseFloat(document.getElementById('stopLoss').value);
+
+                if (state.sessionProfit >= tp) {
+                    log(`Take Profit reached: $${state.sessionProfit.toFixed(2)}`, 'success');
+                    stopBot();
+                    clearInterval(autoBotInterval);
+                    return;
+                }
+
+                if (state.sessionProfit <= sl) {
+                    log(`Stop Loss reached: $${state.sessionProfit.toFixed(2)}`, 'error');
+                    stopBot();
+                    clearInterval(autoBotInterval);
+                    return;
+                }
+
+                // Check max consecutive losses
+                const maxLosses = parseInt(document.getElementById('maxLosses').value);
+                if (state.consecutiveLosses >= maxLosses) {
+                    log(`Max consecutive losses reached: ${state.consecutiveLosses}`, 'error');
+                    stopBot();
+                    clearInterval(autoBotInterval);
+                    return;
+                }
+
+                await executeTrade();
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }, 100);
+        }
+
+        function stopBot() {
+            state.botRunning = false;
+            log('Bot stopped', 'warning');
+            updateUI();
+        }
+
+        // ============================================
+        // MESSAGE SENDING
+        // ============================================
+        function sendMessage(payload) {
+            if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+                state.ws.send(JSON.stringify(payload));
+            } else {
+                log('WebSocket not ready', 'error');
+            }
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+        document.getElementById('connectBtn').addEventListener('click', async () => {
+            const token = document.getElementById('apiToken').value;
+            
+            if (!token) {
+                log('Please enter API token', 'error');
+                return;
+            }
+
+            try {
+                await connectWebSocket();
+                
+                // Authorize
+                sendMessage({
+                    authorize: token
+                });
+
+                log('Connecting and authorizing...', 'info');
+            } catch (error) {
+                log(`Connection failed: ${error.message}`, 'error');
+            }
+        });
+
+        document.getElementById('tradeBtn').addEventListener('click', async () => {
+            await executeTrade();
+        });
+
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            stopBot();
+        });
+
+        document.getElementById('emergencyBtn').addEventListener('click', () => {
+            state.botRunning = false;
+            state.authorized = false;
+            if (state.ws) {
+                state.ws.close();
+            }
+            log('Emergency stop activated', 'error');
+            updateUI();
+        });
+
+        document.getElementById('manualMode').addEventListener('click', () => {
+            state.botMode = 'manual';
+            log('Manual mode selected', 'info');
+        });
+
+        document.getElementById('speedBotMode').addEventListener('click', () => {
+            startSpeedBot();
+        });
+
+        document.getElementById('autoBotMode').addEventListener('click', () => {
+            startAutoBot();
+        });
+
+        document.getElementById('clearLogBtn').addEventListener('click', () => {
+            document.getElementById('tradeLog').innerHTML = '';
+            log('Log cleared', 'info');
+        });
+
+        // Initialize UI
+        updateUI();
+    </script>
+</body>
+</html>
