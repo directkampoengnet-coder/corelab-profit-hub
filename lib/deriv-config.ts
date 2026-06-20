@@ -10,7 +10,7 @@
  * - Derivatives Base (optional): https://github.com/deriv-com/derivatives
  */
 
-export const DERIV_APP_ID = "33By9uvzJbBsOjEclocwV"
+export const DERIV_APP_ID = 106629
 export const DERIV_REDIRECT_URL = typeof window !== "undefined" ? window.location.origin : ""
 
 export const DERIV_CONFIG = {
